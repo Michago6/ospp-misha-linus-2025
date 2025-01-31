@@ -64,7 +64,8 @@ boot:
 	# Set PC in job 1 context
 	
 	la $t0, __job_1_context
-	la $t1, job_getc
+	#la $t1, job_getc
+	la $t1, job_gets
 	sw $t1, 0($t0)
 	
 	# Job 1 will start to execute.
@@ -111,6 +112,8 @@ boot:
 # Strings used by the jobs to print messages to the Run I/O pane. 
 
 JOB_GETC_HELLO:		.asciiz "Job started running getc\n"
+JOB_GETS_HELLO:		.asciiz "Job started running gets\n"
+
 JOB_ÌNCREMENT_HELLO:	.asciiz "Job started running increment\n"
 
 JOB_ID:			.asciiz "Job id = "
@@ -187,6 +190,22 @@ job_increment:
 job_increment_infinite_loop:
 	addi $s0, $s0, 1
 	j job_increment_infinite_loop
+	
+#------------------------------------------------------------------------------
+# GETS
+#
+# User level job. 
+#------------------------------------------------------------------------------
+
+job_gets:
+
+	# Use the MARS builtin system call (4) to print strings.
+	
+	li $v0, 4               # System call code (4) print string. 
+	la $a0, JOB_GETS_HELLO  # String to print.
+	syscall 		# Execute the MARS built-in system call (4) to print string.
+	
+	j job_getc
 	
 
 #------------------------------------------------------------------------------
@@ -587,6 +606,21 @@ TODO_4: # Put the jid of the caller in register $a0.
 	j __return_from_exception
    	  	
 __system_call_getc:
+
+	# As of now: 
+	#   $k0 - Job ID of caller.
+	#   $k1 - Address of caller context.
+	
+	# Reading a character from the keyboard is a BLOCKING system call. 
+		
+	# Block the caller by changing the state of the caller to waiting. 
+	
+	sw $k0, __waiting
+	
+	# To be able to resume the caller later, must save the address where to 
+	# resume once the requested character from the keyboard is ready.
+		
+__system_call_gets:
 
 	# As of now: 
 	#   $k0 - Job ID of caller.
