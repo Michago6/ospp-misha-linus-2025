@@ -64,7 +64,8 @@ boot:
 	# Set PC in job 1 context
 	
 	la $t0, __job_1_context
-	la $t1, job_getc
+	#la $t1, job_getc
+	la $t1, job_gets
 	sw $t1, 0($t0)
 	
 	# Job 1 will start to execute.
@@ -110,7 +111,15 @@ boot:
 
 # Strings used by the jobs to print messages to the Run I/O pane. 
 
+#gets data
+INPUTED_STRING_MSG: .asciiz "Inputed string -> "       # Define newline string
+GETS_LAST_BUF_ADDRESS:  .word 0
+GETS_BUF_SIZE:     	.word 6
+JOB_GETS_HELLO:		.asciiz "Job started running gets\n"
+
 JOB_GETC_HELLO:		.asciiz "Job started running getc\n"
+
+
 JOB_ÌNCREMENT_HELLO:	.asciiz "Job started running increment\n"
 
 JOB_ID:			.asciiz "Job id = "
@@ -187,6 +196,78 @@ job_increment:
 job_increment_infinite_loop:
 	addi $s0, $s0, 1
 	j job_increment_infinite_loop
+	
+#------------------------------------------------------------------------------
+# GETS
+#
+# User level job. 
+#------------------------------------------------------------------------------
+
+
+
+job_gets:
+    	# Print Job started message
+    	li $v0, 4
+    	la $a0, JOB_GETS_HELLO
+    	syscall
+    
+    	li $v0, 9
+    	lw $a0, GETS_BUF_SIZE
+    	syscall
+    	move $a0, $v0
+    
+    	# Load the buffer size (GETS_BUF_SIZE) into $t1
+  	lw $t1, GETS_BUF_SIZE
+
+  	# Add buffer size to the initial address ($a0) to get the last buffer address
+  	add $t2, $a0, $t1   # $t2 = $a0 + GETS_BUF_SIZE
+
+  	# Store the last buffer address in GETS_LAST_BUF_ADDRESS
+  	sw $t2, GETS_LAST_BUF_ADDRESS  # Store result at GETS_LAST_BUF_ADDRESS
+  	# addi $t2, $zero, 0
+  	# lw $t2, GETS_LAST_BUF_ADDRESS
+    
+
+    	# Infinite loop for reading characters
+job_gets_loop:
+    	# Wait for the keyboard interrupt to capture a character
+    	li $v0, 12         # Read char syscall
+    	teqi $zero, 0       # Trigger system call (getc)
+
+    	# Store character in buffer
+    	sb $v0, 0($a0)
+    	addi $a0, $a0, 1   # Increment buffer pointer
+    
+    	# Check if buffer is full
+    	lw $t1, GETS_LAST_BUF_ADDRESS
+    	sub $t1, $t1, 1
+    	sub $t2, $t1, $a0   # Check buffer size
+    	beqz $t2, job_gets_print   # If full, print the buffer
+
+    	# Trigger job1 (job_increment) here
+    	# li $v0, 1          # System call code for running job
+    	# syscall
+
+    	j job_gets_loop    # Keep reading more characters
+
+job_gets_print:               	
+
+	sb $zero, 1($a0)    # Null terminate string
+    	# Print buffer contents
+    	li $v0, 4
+    	lw $t1, GETS_BUF_SIZE
+    	addi $t1, $t1, -1 	# put buf_siz -1 into $t1
+    	sub $a0, $a0, $t1 	# subtract $t1 from $a0
+    	# $a0 now contains the string
+    	syscall
+    	
+    	# Print a newline
+    	li $v0, 4               # Load syscall code for printing a string
+    	la $a0, NL              # Load the address of the newline string
+    	syscall                 # Print newline
+    	
+    	j job_gets
+	
 	
 
 #------------------------------------------------------------------------------
@@ -423,11 +504,11 @@ __save_running_job_context:
 	
 TODO_1: # Save $a0, $a1, $s0 to the context. 
         	
-	
-	lw $a0, __at            # NOTE: $at was saved to memory when entering the kernel!
 	sw $a0, 8($k1)         # $at
 	sw $a1, 12($k1)         
-	sw $s0, 16($k1)         
+	sw $s0, 16($k1)   	
+	lw $a0, __at            # NOTE: $at was saved to memory when entering the kernel!
+      
 		
 	# Pop return address.
 	
@@ -565,6 +646,8 @@ TODO_3: # Jump to label __system_call_getc for system call code 12.
 
 	beq $v0, 12, __system_call_getc
 	
+	beq $v0, 8, __system_call_gets
+	
    	
    	j __unsported_system_call
  
@@ -597,6 +680,25 @@ __system_call_getc:
 	# Block the caller by changing the state of the caller to waiting. 
 	
 	sw $k0, __waiting
+	
+	# To be able to resume the caller later, must save the address where to 
+	# resume once the requested character from the keyboard is ready.
+		
+	j TODO_5 # skip gets system call
+	
+__system_call_gets:
+
+	# As of now: 
+	#   $k0 - Job ID of caller.
+	#   $k1 - Address of caller context.
+	
+	# Reading a character from the keyboard is a BLOCKING system call. 
+		
+	# Block the caller by changing the state of the caller to waiting. 
+	
+	sw $k0, __waiting
+	
+	# addi $a0, $a0, 1 # increment buffer pointer
 	
 	# To be able to resume the caller later, must save the address where to 
 	# resume once the requested character from the keyboard is ready.
