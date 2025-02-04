@@ -11,7 +11,8 @@ void child_a(int fd[]) {
     dup2(fd[WRITE], STDOUT_FILENO);
     execlp("ls", "ls", "-F", "-1", NULL);
     close(fd[WRITE]);
-    exit(EXIT_SUCCESS);
+    perror("execlp");
+    exit(EXIT_FAILURE);
 }
 
 void child_b(int fd[]) {
@@ -19,7 +20,8 @@ void child_b(int fd[]) {
     dup2(fd[READ], STDIN_FILENO);
     execlp("nl", "nl", NULL);
     close(fd[READ]);
-    exit(EXIT_SUCCESS);
+    perror("execlp");
+    exit(EXIT_FAILURE);
 }
 
 int main(void) {
