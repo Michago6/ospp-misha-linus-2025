@@ -4,7 +4,7 @@
 #include <unistd.h>  // getpid(), pause()
 #include <stdbool.h> // true, false
 
-bool done = false;
+volatile sig_atomic_t done = false;
 
 int divide_by_zero() {
   int a = 1;
@@ -27,6 +27,7 @@ void signal_handler(int s) {
       exit(EXIT_FAILURE);
       break;
     case SIGINT:
+      done = true;
       fputs("Caught SIGINT: interactive attention signal, probably a ctrl+c.\n", stderr);
       break;
     case SIGUSR1:
@@ -41,14 +42,18 @@ int main(void) {
 
   // Install signal handlers.
 
-  // signal(SIGFPE,  signal_handler);
+  signal(SIGFPE,  signal_handler);
+  signal(SIGINT,  signal_handler);
+  signal(SIGUSR1,  signal_handler);
 
   // divide_by_zero();
   // segfault();
 
   // Wait until a signal is delivered.
 
-  // pause();
+  while(pause()) {
+    if(done) break;
+  }
 
   puts("I'm done!");
 
