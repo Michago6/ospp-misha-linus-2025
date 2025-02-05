@@ -65,7 +65,7 @@ boot:
 	
 	la $t0, __job_1_context
 	#la $t1, job_getc
-	la $t1, job_gets
+	la $t1, job_gets_tests
 	sw $t1, 0($t0)
 	
 	# Job 1 will start to execute.
@@ -114,9 +114,15 @@ boot:
 #gets data
 INPUTED_STRING_MSG: .asciiz "Inputed string -> "       # Define newline string
 GETS_LAST_BUF_ADDRESS:  .word 0
+GETS_TEST_MODE:  .word 0
 GETS_EARLY_TERMINATION_COUNTER:  .word 0
 GETS_BUF_SIZE:     	.word 6
 JOB_GETS_HELLO:		.asciiz "Job started running gets\n"
+TEST_EDGE_MSG:		.asciiz "\nExpected output-> \nReceived output->\n"
+TEST_2_MSG:		.asciiz "\nExpected output-> h\nReceived output-> "
+TEST_5_MSG:		.asciiz "\nExpected output-> hhhh\nReceived output-> "
+TEST_32_MSG:		.asciiz "\nExpected output-> hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh\nReceived output-> "
+TEST_64_MSG:		.asciiz "\nExpected output-> hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh\nReceived output-> "
 
 JOB_GETC_HELLO:		.asciiz "Job started running getc\n"
 
@@ -203,19 +209,90 @@ job_increment_infinite_loop:
 #
 # User level job. 
 #------------------------------------------------------------------------------
+job_gets_tests:
+	lw $t0, GETS_TEST_MODE
+	addi, $t0, $zero, 1
+	sw $t0, GETS_TEST_MODE
+	
+	li $v0, 4
+    	la $a0, TEST_EDGE_MSG  # Load test message for buffer size -2
+    	syscall
+	li $t0, -2  # Test gets with buffer size -2
+	sw $t0, GETS_BUF_SIZE
+	jal job_gets
+	
+	li $v0, 4
+    	la $a0, TEST_EDGE_MSG  # Load test message for buffer size 0
+    	syscall
+	li $t0, 0  # Test gets with buffer size 0
+	sw $t0, GETS_BUF_SIZE
+	jal job_gets
+	
+	li $v0, 4
+    	la $a0, TEST_EDGE_MSG  # Load test message for buffer size 1
+    	syscall
+	li $t0, 1  # Test gets with buffer size 1
+	sw $t0, GETS_BUF_SIZE
+	jal job_gets
+	
+	
+	li $v0, 4
+    	la $a0, TEST_2_MSG  # Load test message for buffer size 2
+    	syscall
+	li $t0, 2  # Test gets with buffer size 2
+	sw $t0, GETS_BUF_SIZE
+	jal job_gets
 
+
+	li $v0, 4
+    	la $a0, TEST_5_MSG  # Load test message for buffer size 5
+    	syscall	
+	li $t0, 5  # Test gets with buffer size 5
+	sw $t0, GETS_BUF_SIZE
+	jal job_gets
+	
+	
+	li $v0, 4
+    	la $a0, TEST_32_MSG  # Load test message for buffer size 32
+    	syscall	
+	li $t0, 32  # Test gets with buffer size 32
+	sw $t0, GETS_BUF_SIZE
+	jal job_gets
+	
+	
+	li $v0, 4
+    	la $a0, TEST_64_MSG  # Load test message for buffer size 64
+    	syscall	
+	li $t0, 64  # Test gets with buffer size 64
+	sw $t0, GETS_BUF_SIZE
+	jal job_gets
+
+
+    	li $v0, 10        # Exit program
+    	syscall
+	
 
 
 job_gets:
     	# Print Job started message
-    	li $v0, 4
-    	la $a0, JOB_GETS_HELLO
-    	syscall
-    
+    	# li $v0, 4
+    	# la $a0, JOB_GETS_HELLO
+    	# syscall
+        
+        
+    	
     	li $v0, 9
     	lw $a0, GETS_BUF_SIZE
-    	syscall
-    	move $a0, $v0
+    	
+	ble $t0, -1, test_jump_back # branch before string allocation if buf size is negative
+    	
+    	syscall #allocate the string on heap
+
+        move $a0, $v0
+        
+        lw $t0, GETS_BUF_SIZE # Load in buf size
+    
+        ble $t0, 1, gets_empty_string # Edge case check
     
     	# Load the buffer size (GETS_BUF_SIZE) into $t1
   	lw $t1, GETS_BUF_SIZE
@@ -232,8 +309,16 @@ job_gets:
     	# Infinite loop for reading characters
 job_gets_loop:
     	# Wait for the keyboard interrupt to capture a character
+    	lw $t0, GETS_TEST_MODE
+    	beq $t0, 1, test_mode_enabled_start
+    	
     	li $v0, 12         # Read char syscall
     	teqi $zero, 0       # Trigger system call (getc)
+    	j test_mode_enabled_end
+    	
+test_mode_enabled_start:
+    	li $v0, 0x68         #Simulates reading letter 'h'
+test_mode_enabled_end:
 
     	# ASCII code for newline is 10
     	beq $v0, 10, early_termination  # If newline, print the buffer
@@ -260,9 +345,10 @@ job_gets_loop:
     	# li $v0, 1          # System call code for running job
     	# syscall
     	
-
-
+    	
+	
     	j job_gets_loop    # Keep reading more characters
+
     	
 early_termination:
     	sb $zero, 0($a0)  # Properly null terminate the string
@@ -300,8 +386,25 @@ job_gets_print:
     	la $a0, NL              # Load the address of the newline string
     	syscall                 # Print newline
     	
-    	j job_gets
+    	
+    	lw $t0, GETS_TEST_MODE
+	beq $t0, 1, test_jump_back #jump back to tests if test mode enabled
 	
+    	j job_gets
+test_jump_back:
+	jr $ra
+
+gets_empty_string:
+	sb $zero, 0($a0)    # Null terminate string
+
+    	# Print buffer contents
+    	li $v0, 4
+    	# $a0 now contains the string
+    	syscall # print buffer contents
+    	
+    	j test_jump_back
+	
+
 	
 
 #------------------------------------------------------------------------------
