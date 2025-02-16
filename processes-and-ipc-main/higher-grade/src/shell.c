@@ -62,23 +62,26 @@ void fork_cmd(int i, int num_commands, int fd_array[][2]) {
 
       // Om detta inte är det första kommandot, omdirigera stdin från den föregående pipen.
       if (i > 0) {
-        // 'pipes[i-1][0]' is the read end of the previous pipe.
+        // 'pipes[i-1][0]' är läs ändan av föregående rör.
+
         if (dup2(fd_array[i-1][0], STDIN_FILENO) == -1) {
           perror("dup2 stdin");
           exit(EXIT_FAILURE);
         }
       }
 
-      // If this is not the last command, redirect stdout to the next pipe.
+      // Om detta inte är den sista kommandot, omdirigera stdout till nästa rör.
+
       if (i < num_commands - 1) {
-        // 'pipes[i][1]' is the write end of the next pipe.
+        // 'pipes[i][1]' är skrivändan av nästa rör.
+
         if (dup2(fd_array[i][1], STDOUT_FILENO) == -1) {
           perror("dup2 stdout");
           exit(EXIT_FAILURE);
         }
       }
 
-      // Close all pipe file descriptors in the child since they are duplicated now.
+      // Stäng alla rörfilbeskrivare i barnet eftersom de nu är duplicerade.
       for (int j = 0; j < num_commands - 1; j++) {
         close(fd_array[j][READ]);
         close(fd_array[j][WRITE]);
