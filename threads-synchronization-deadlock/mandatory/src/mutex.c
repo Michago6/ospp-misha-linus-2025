@@ -80,9 +80,11 @@ inc_mutex(void *arg __attribute__((unused)))
     int i;
 
     for (i = 0; i < INC_ITERATIONS; i++) {
+        pthread_mutex_lock(&mutex);
         /* TODO: Protect access to the shared variable counter with a mutex lock
          * inside the loop. */
         counter += INCREMENT;
+        pthread_mutex_unlock(&mutex);
     }
 
     return NULL;
@@ -95,9 +97,11 @@ dec_mutex(void *arg __attribute__((unused)))
     int i;
 
     for (i = 0; i < DEC_ITERATIONS; i++) {
+        pthread_mutex_lock(&mutex);
         /* TODO: Protect access to the shared variable counter with a mutex lock
          * inside the loop. */
         counter -= DECREMENT;
+        pthread_mutex_unlock(&mutex);
     }
 
     return NULL;
@@ -110,10 +114,14 @@ dec_mutex(void *arg __attribute__((unused)))
 
 void spin_lock() {
     /* TODO: Implement the lock operation for a test-and-set spinlock. */
+    while (__sync_lock_test_and_set(&lock, true)) {
+        //busy wait
+    }
 }
 
 void spin_unlock() {
     /* TODO: Implement the unlock operation for a test-and-set spinlock. */
+    __sync_lock_release(&lock);
 }
 
 /* Increments of the shared counter should be protected by a test-and-set spinlock */
@@ -124,7 +132,9 @@ inc_tas_spinlock(void *arg __attribute__((unused)))
 
     for (i = 0; i < INC_ITERATIONS; i++) {
         /* TODO: Add the spin_lock() and spin_unlock() operations inside the loop. */
+        spin_lock();
         counter += INCREMENT;
+        spin_unlock();
     }
 
     return NULL;
@@ -137,8 +147,10 @@ dec_tas_spinlock(void *arg __attribute__((unused)))
     int i;
 
     for (i = 0; i < DEC_ITERATIONS; i++) {
+        spin_lock();
         /* TODO: Add the spin_lock() and spin_unlock() operations inside the loop. */
         counter -= DECREMENT;
+        spin_unlock();
     }
 
     return NULL;
@@ -146,7 +158,7 @@ dec_tas_spinlock(void *arg __attribute__((unused)))
 
 
 /*******************************************************************************
-                      Tes 3 - Atomic addition/subtraction
+                      Test 3 - Atomic addition/subtraction
 *******************************************************************************/
 
 /* Increment the shared counter using an atomic increment instruction */
@@ -157,8 +169,8 @@ inc_atomic(void *arg __attribute__((unused)))
 
     for (i = 0; i < INC_ITERATIONS; i++) {
         /* TODO: Use atomic addition to increment the shared counter */
-
-        counter += INCREMENT; // You need to replace this.
+        __sync_fetch_and_add(&counter, 1);
+        //counter += INCREMENT; // You need to replace this.
     }
 
     return NULL;
@@ -172,8 +184,8 @@ dec_atomic(void *arg __attribute__((unused)))
 
     for (i = 0; i < DEC_ITERATIONS; i++) {
         /* TODO: Use atomic subtraction to increment the shared counter */
-
-        counter -= DECREMENT; // You need to replace this.
+        __sync_fetch_and_sub(&counter, 1);
+        //counter -= DECREMENT; // You need to replace this.
     }
 
     return NULL;
