@@ -130,4 +130,10 @@ int main(){
   puts("\n==== Test program for the Simple Threads API ====\n");
 
   init(); // Initialization
+
+  // magic_numbers();
+  // letters();
+  spawn(numbers());
+  // fibonacci_fast();
+  // fibonacci_slow();
 }
