@@ -21,7 +21,7 @@
  */
 typedef struct {
   int balance;
-
+  pthread_mutex_t lock;
 } account_t;
 
 /**

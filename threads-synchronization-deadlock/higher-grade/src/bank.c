@@ -18,6 +18,8 @@
 #define MIN_SLEEP 10000
 #define MAX_RANDOM_SLEEP 10000
 
+pthread_mutex_t mutex;
+
 void RANDOM_SLEEP() { usleep(MIN_SLEEP + (rand() % MAX_RANDOM_SLEEP)); }
 
 account_t *account_new(unsigned int balance) {
@@ -25,10 +27,19 @@ account_t *account_new(unsigned int balance) {
 
   account->balance = balance;
 
+  if (pthread_mutex_init(&mutex, NULL) < 0) {
+    perror("Init mutex lock");
+    exit(EXIT_FAILURE);
+  }
+
+  account->lock = mutex;
+
   return account;
 }
 
-void account_destroy(account_t *account) {}
+void account_destroy(account_t *account) {
+  free(account);  
+}
 
 /**
  * A purposefully stupid way to add two numbers that makes data
@@ -55,7 +66,10 @@ int sub(int a, int b) {
 }
 
 int transfer(int amount, account_t *from, account_t *to) {
-    if (from->balance >= amount) {
+  pthread_mutex_lock(&from->lock);
+  if (from->balance >= amount) {
+    
+    pthread_mutex_lock(&to->lock);
     from->balance = sub(from->balance, amount);
 
     /**
@@ -65,9 +79,12 @@ int transfer(int amount, account_t *from, account_t *to) {
     RANDOM_SLEEP();
 
     to->balance = add(to->balance, amount);
+    pthread_mutex_unlock(&from->lock);
+    pthread_mutex_unlock(&to->lock);
 
     return 0;
   } else {
+    pthread_mutex_unlock(&from->lock);
     return -1;
   }
 }
