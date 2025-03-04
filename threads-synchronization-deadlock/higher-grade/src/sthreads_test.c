@@ -133,7 +133,17 @@ int main(){
 
   // magic_numbers();
   // letters();
-  spawn(numbers());
+
+  spawn(fibonacci_fast);
+  spawn(magic_numbers);
+  yield();
+
+  // printf("\ntid: %d\n", spawn(magic_numbers));
+
+
+
+
+
   // fibonacci_fast();
-  // fibonacci_slow();
+  // fibonacci_sloJw();
 }
