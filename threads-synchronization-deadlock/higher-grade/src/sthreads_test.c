@@ -83,8 +83,8 @@ void fibonacci_fast() {
   int b = 1;
   int n = 0;
   int next = a + b;
-
-  while(true) {
+  bool test = true;
+  while(test) {
     printf(" fib(%02d) = %d\n", n, a);
     next = a + b;
     a = b;
@@ -96,6 +96,8 @@ void fibonacci_fast() {
       b = 1;
       n = 0;
     }
+    // test = false;
+    yield();
   }
 }
 
@@ -106,16 +108,20 @@ void fibonacci_fast() {
 void magic_numbers() {
   int n = 3;
   int m;
-  while (true) {
+  bool test = true;
+  while (test) {
     m = (n*(n*n+1)/2);
     if (m > 0) {
       printf(" magic(%d) = %d\n", n, m);
+      // printf("magick");
       n = (n+1) % INT_MAX;
     } else {
       // Start over when m overflows.
       n = 3;
     }
+    // printf("YIELD NOW!!\n\n");
     yield();
+    // test = false;
   }
 }
 

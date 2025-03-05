@@ -26,10 +26,10 @@
 
                 Add data structures to manage the threads here.
 ********************************************************************************/
-thread_t *kernel_thread = NULL;
 // thread_t *latest_thread = NULL;
 tid_t global_tid = 0;
 thread_t *running_thread = NULL;
+bool thread_executing = false;
 
 typedef struct ready_queue {
     size_t size;
@@ -90,6 +90,7 @@ thread_t *dequeue() {
         ready_queue->first_thread = NULL;
         ready_queue->last_thread = NULL;
         return to_return;
+        //if size < 1
     } else {
         return NULL;
     }
@@ -101,27 +102,8 @@ thread_t *dequeue() {
 int init() { 
 
     ready_queue = malloc(sizeof(ready_queue_t));
+    if (!ready_queue) return -1;
 
-
-    
-    
-    thread_t *thread = malloc(sizeof(thread_t));
-    if (thread == NULL) return -1;
-    thread->tid = global_tid;
-    global_tid++;
-    thread->state = running;
-    thread->next = NULL;
-    
-    thread->ctx.uc_stack.ss_sp = malloc(STACK_SIZE);  // Allocate stack space and update stack pointer
-    thread->ctx.uc_stack.ss_size = STACK_SIZE; // Notify context of stack size allocated
-
-    if(getcontext(&(thread->ctx)) == -1 ) {
-        return -1;
-    }
-    
-
-    kernel_thread = thread;
-    running_thread = thread;
     return 1;
 }
 
@@ -140,7 +122,7 @@ tid_t spawn(void (*start)()) {
     if(getcontext(&(thread->ctx)) == -1 ) {
         return -1;
     }
-
+    
     
     makecontext(&(thread->ctx), start, 0);
     
@@ -148,6 +130,7 @@ tid_t spawn(void (*start)()) {
     // if (ready_queue->first_thread == NULL) { ready_queue->first_thread = thread; };
     // ready_queue->last_thread = thread;
     enqueue(thread);
+    //printf("readyqueue size: %ld\n", ready_queue->size);
 
     // printf("where diamonds?");
     // printf("so we back in the mine.");
@@ -161,11 +144,60 @@ tid_t spawn(void (*start)()) {
 }
 
 void yield() {
+
+
+    // //if running_thread is null then execute it
+    // if(!running_thread) {
+    //     //printf("no running thread...\n");
+    //     thread_t *to_run = dequeue();
+    //     if(!to_run) {
+    //         //printf("no process to run");
+    //         return;
+    //     }
+    //     to_run->state = running;
+    //     running_thread = to_run;
+    //     setcontext(&(to_run->ctx));
+    // }
+
+
+
+    //printf("yiled");
+    // if(ready_queue->size < 1) {
+    //     return;
+    // }
+   // printf("readyqueue size: %ld\n", ready_queue->size);
     thread_t *to_run = dequeue();
-    //request a lock held by another thread
-    //swapcontext();
-    swapcontext(&(running_thread->ctx), &(to_run->ctx));
-    running_thread = to_run;
+    if(!to_run) {
+        printf("ERROR: no process to run!, readyqueue size: %ld\n", ready_queue->size);
+        
+        return;
+    }
+    to_run->state = running;
+    //printf("två första klara");
+
+    if (thread_executing) {
+        // printf("nu ska vi öka size\n");
+        enqueue(running_thread);
+        // printf("enqueu\n");
+
+        thread_t *old_thread = running_thread;
+        
+        running_thread = to_run;
+
+        old_thread->state = ready;
+        swapcontext(&(old_thread->ctx), &(to_run->ctx));
+    } else {
+        thread_executing = true;
+        // printf("set context\n");
+
+
+        running_thread = to_run;
+
+        setcontext(&(to_run->ctx));
+    }
+    //printf("running thread initializer\n");
+
+
 }
 
 //3 points
