@@ -142,6 +142,7 @@ int main(){
 
   spawn(fibonacci_fast);
   spawn(magic_numbers);
+  spawn(letters);
   yield();
 
   // printf("\ntid: %d\n", spawn(magic_numbers));
