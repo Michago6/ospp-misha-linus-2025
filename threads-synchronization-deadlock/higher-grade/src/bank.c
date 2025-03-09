@@ -38,6 +38,7 @@ account_t *account_new(unsigned int balance) {
 }
 
 void account_destroy(account_t *account) {
+  //pthread_mutex_destroy(&(account->lock));
   free(account);  
 }
 
@@ -69,17 +70,17 @@ int transfer(int amount, account_t *from, account_t *to) {
   pthread_mutex_lock(&from->lock);
   if (from->balance >= amount) {
     
-    pthread_mutex_lock(&to->lock);
     from->balance = sub(from->balance, amount);
-
+    pthread_mutex_unlock(&from->lock);
+    
     /**
      * Don't remove this RANDOM_SLEEP. This is used to enforce a more
      * randomized interleaving of the threads.
      */
     RANDOM_SLEEP();
-
+    
+    pthread_mutex_lock(&to->lock);
     to->balance = add(to->balance, amount);
-    pthread_mutex_unlock(&from->lock);
     pthread_mutex_unlock(&to->lock);
 
     return 0;
