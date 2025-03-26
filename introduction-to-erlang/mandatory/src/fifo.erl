@@ -10,6 +10,7 @@
 
 %% @doc Creates an empty FIFO buffer.
 -opaque fifo()::{fifo, list(), list()}.
+-export_type([fifo/0]).
 -spec new() -> fifo().
 
 %% Represent the FIFO using a 3-tuple {fifo, In, Out} where In and
@@ -17,25 +18,32 @@
 
 new() -> {fifo, [], []}.
 
-%% @doc TODO Add a description
+%% @doc Returns the size for a given FIFO queue.
 -spec size(Fifo) -> integer() when
       Fifo::fifo().
 
 size({fifo, In, Out}) ->
     length(In) + length(Out).
 
-%% @doc TODO Add a description
-%% TODO: add a -spec type declaration
+%% @doc Pushes one element to the FIFO In list.
+-spec push({fifo, L1, L2}, H) -> {fifo, L1, L2}
+    when H :: integer(),
+         L1 :: [integer()],
+         L2 :: [integer()].
 
 %% To make it fast to push new values, add a new value to the head of
 %% In.
 
 push({fifo, In, Out}, X) ->
-    tbi.
+    {fifo, [X | In], Out}.
 
-%% @doc TODO Add a description
+%% @doc Pops one element from the Out list if there is at least one element in it.
+%%      If Out is empty, In is reversed and put into Out then Pops out. 
 %% @throws 'empty fifo'
-%% TODO: add a -spec type declaration
+-spec pop({fifo, L1, L2}) -> {H, {fifo, L1, L2}}
+    when H :: integer(),
+         L1 :: [integer()],
+         L2 :: [integer()].
 
 %% pop should return {Value, NewFifo}
 
@@ -45,17 +53,19 @@ pop({fifo, [], []}) ->
 %% To make pop fast we want to pop of the head of the Out list.
 
 pop({fifo, In, [H|T]}) ->
-    tbi;
+    {H, {fifo, In, T}};
 
 %% When Out is empty, we must take a performance penalty. Use the
 %% reverse of In as the new Out and an empty lists as the new In, then
 %% pop as usual.
 
 pop({fifo, In, []}) ->
-    tbi.
+    L = lists:reverse(In),
+    pop({fifo, [], L}).
 
 
-%% @doc TODO Add a description
+%% @doc Checks if the given FIFO is empty. Returns true or false depending on
+%% whether the FIFO is empty of not.
 -spec empty(Fifo) -> boolean() when Fifo::fifo().
 
 empty({fifo, [], []}) ->
