@@ -15,7 +15,7 @@ hello() ->
 %%%%%%%%%%  Recursive functions %%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% @doc TODO: add description here
+%% @doc prints hello N times where N is infront of hello and then a newline is added. At the end ok is returned.
 -spec hello(N :: integer()) -> ok.
 hello(0) ->
     ok;
@@ -57,7 +57,7 @@ fac_tr(N) ->
 fac_tr(0, Acc) ->
     Acc;
 fac_tr(N, Acc) ->
-    tbi.
+    fac_tr(N - 1, Acc * N).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%  List Comprehensions %%%%%%%%%%
@@ -77,7 +77,7 @@ fac_tr(N, Acc) ->
          C :: integer().
 right_triangles(N) ->
     L = lists:seq(1, N),
-    tbi.
+    [{X, Y, Z} || X <- L, Y <- L, Z <- L, X*X + Y*Y == Z*Z].
 
 %% @doc Returns a list of tuples, where each tuple describes a character in the Simpson family.
 %%
@@ -123,13 +123,13 @@ simpsons() ->
     when Filter :: names | males | females | pets,
          Name :: string().
 simpsons(names) ->
-    tbi;
+    [Z || {X, Y, Z} <- simpsons()];
 simpsons(males) ->
-    tbi;
+    [Z || {X, Y, Z} <- simpsons(), Y == male];
 simpsons(females) ->
-    tbi;
+    [Z || {X, Y, Z} <- simpsons(), Y == female];
 simpsons(pets) ->
-    tbi.
+    [Z || {X, Y, Z} <- simpsons(), X =/= person].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%  Guarded Functions  %%%%%%%%%%
@@ -144,8 +144,10 @@ simpsons(pets) ->
 %% 64'''
 %% </div>
 -spec char_to_upper(char()) -> char().
-char_to_upper(Char) when true ->
-    tbi.
+char_to_upper(Char) when Char > 96, Char < 123 ->
+    Char - 32;
+char_to_upper(Char) ->
+    Char.
 
 %% @doc Convert a character to lower case.
 %% === Example ===
@@ -156,8 +158,10 @@ char_to_upper(Char) when true ->
 %% 64'''
 %% </div>
 -spec char_to_lower(char()) -> char().
-char_to_lower(Char) when true ->
-    tbi.
+char_to_lower(Char) when Char > 64, Char < 91 ->
+    Char + 32;
+char_to_lower(Char) ->
+    Char.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%  Map  %%%%%%%%%%
@@ -173,7 +177,7 @@ char_to_lower(Char) when true ->
 %% </div>
 -spec str_to_upper(string()) -> string().
 str_to_upper(String) ->
-    tbi.
+    lists:map(fun(X) -> char_to_upper(X) end,  String).  
 
 %% @doc Convert a string to lower case.
 %% === Example ===
@@ -183,7 +187,7 @@ str_to_upper(String) ->
 %% </div>
 -spec str_to_lower(string()) -> string().
 str_to_lower(String) ->
-    tbi.
+    lists:map(fun(X) -> char_to_lower(X) end,  String).  
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%  Fold %%%%%%%%%%
@@ -199,7 +203,9 @@ str_to_lower(String) ->
     when L :: [integer()],
          M :: integer().
 max([H | T]) ->
-    F = tbi,
+    F = fun(X, Max) when X > Max -> X;
+        (X, Max) -> Max
+        end,
     lists:foldl(F, H, T).
 
 %% @doc Returns the number of times Char occurs in String.
@@ -213,7 +219,9 @@ max([H | T]) ->
     when String :: string(),
          Char :: char().
 count(String, Char) ->
-    F = tbi,
+    F = fun(X, Count) when X == Char -> Count + 1;
+        (X, Count) -> Count
+        end,
 
     lists:foldl(F, 0, String).
 
@@ -232,7 +240,7 @@ odd_and_even(List) ->
     F = fun (X, {{odd, Odd}, {even, Even}}) when X rem 2 == 0 ->
                 {{odd, Odd}, {even, [X | Even]}};
             (X, {{odd, Odd}, {even, Even}}) ->
-                tbi
+                {{odd, [X | Odd]}, {even, Even}}
         end,
 
     lists:foldl(F, {{odd, []}, {even, []}}, List).
