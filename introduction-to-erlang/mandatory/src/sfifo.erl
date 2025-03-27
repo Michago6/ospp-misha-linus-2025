@@ -87,7 +87,7 @@ empty(Fifo) ->
 pop(Fifo) ->
     Fifo ! {pop, self()},
     receive
-        {error, empty} -> {error, empty};
+        {error, empty} -> { error , 'empty fifo' };
         {pop, A} -> A
     end.
 
