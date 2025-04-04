@@ -45,7 +45,9 @@ pairs() ->
     #{ping => pong,
       tick => tock,
       hipp => hopp,
-      ding => dong}.
+      ding => dong,
+      king => kong,
+      bing => bong}.
 
 %% @doc Starts the server.
 
@@ -72,7 +74,22 @@ start(true, true) ->
       Stateful :: boolean().
 
 supervisor(Stateful) ->
-    tbi.
+    %% TODO: implement this 
+    process_flag(trap_exit, true),
+    case Stateful of 
+        true ->
+            spawn_link(fun() -> loop(pairs()) end);
+        false ->
+            spawn_link(fun() -> loop() end)
+    end,
+    receive 
+    {'EXIT', PID, simulated_bug} ->
+        io:format("simulated bug PID: ~p~n", [PID]),
+        supervisor(Stateful)
+    end.
+
+
+
 
 %% @doc Terminates the supervised server.
 
@@ -130,11 +147,17 @@ loop() ->
             exit(simulated_bug),
             From ! {pong, blopp},
             loop();
-        {ping, dddding, From} ->
+        {ping, ding, From} ->
             From ! {pong, dong},
+            loop();
+        {ping, king, From} ->
+            From ! {pong, kong},
             loop();
         {ping, ping, From} ->
             From ! {pong, pong},
+            loop();
+        {ping, bing, From} ->
+            From ! {pong, bong},
             loop();
         {ping, tick, From} ->
             From ! {pong, tock},
@@ -143,7 +166,8 @@ loop() ->
             From ! {stop, ok};
         {update, From}  ->
             %% TODO: Trigger a hot code swap.
-            tbi;
+            From ! {update, ok},
+            ?MODULE:loop();
         Msg ->
             io:format("loop/0: Unknown message: ~p~n", [Msg]),
             loop()
@@ -162,10 +186,27 @@ loop(Pairs) ->
         {ping, flip, From} ->
             exit(simulated_bug);
         {ping, Ping, From} ->
-            %% TODO: send correct reply.
+            case maps:is_key(Ping, Pairs) of
+                true ->
+                    From ! {pong, maps:get(Ping, Pairs)};
+                false ->
+                    From ! unknown
+            end,
             loop(Pairs);
         %% TODO: Handle the update, put and stop actions. 
+        {stop, PID} ->
+            update,
+            PID ! {stop, ok};
+            
+        {update, From} ->
+            From ! {update, ok},
+            ?MODULE:loop(Pairs);
+        {put, Ping, Pong, PID} ->
+            PID ! {put, Ping, Pong, ok},
+            Pair2 = maps:put(Ping, Pong, Pairs),
+            loop(Pair2);
         Msg ->
             io:format("loop2/0: Unknown message: ~p~n", [Msg]),
+            stop(),
             loop(Pairs)
     end.
