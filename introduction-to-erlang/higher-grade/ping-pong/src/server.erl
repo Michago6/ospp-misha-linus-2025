@@ -47,7 +47,8 @@ pairs() ->
       hipp => hopp,
       ding => dong,
       king => kong,
-      bing => bong}.
+      bing => bong,
+      ling => long}.
 
 %% @doc Starts the server.
 
@@ -57,11 +58,11 @@ pairs() ->
       Server :: pid().
 
 start(false, false) ->
-    spawn(fun() -> loop() end);
+    spawn(fun() -> loop() end); % works i think
 start(false, true) ->
     spawn(fun() -> supervisor(false) end);
 start(true, false) ->
-    spawn(fun() -> loop(pairs()) end);
+    spawn(fun() -> loop(pairs()) end); % works i think
 start(true, true) ->
     spawn(fun() -> supervisor(true) end).
 
@@ -70,23 +71,25 @@ start(true, true) ->
 %% server terminates due to an error, the supervisor should make a recursive
 %% call to it self to restart the server.
 
--spec supervisor(Stateful) -> ok when
-      Stateful :: boolean().
+-spec supervisor(boolean()) -> no_return().
 
 supervisor(Stateful) ->
-    %% TODO: implement this 
     process_flag(trap_exit, true),
-    case Stateful of 
+    Pid = case Stateful of 
         true ->
             spawn_link(fun() -> loop(pairs()) end);
         false ->
             spawn_link(fun() -> loop() end)
     end,
+    %% Register the server under the name 'server'
+    register(server, Pid),
     receive 
-    {'EXIT', PID, simulated_bug} ->
-        io:format("simulated bug PID: ~p~n", [PID]),
-        supervisor(Stateful)
+        {'EXIT', Pid, Reason} ->
+            io:format("Server crashed with reason ~p. Restarting...~n", [Reason]),
+            unregister(server),
+            supervisor(Stateful)
     end.
+
 
 
 
@@ -162,6 +165,9 @@ loop() ->
         {ping, tick, From} ->
             From ! {pong, tock},
             loop();
+        {ping, ling, From} ->
+            From ! {pong, long},
+            loop();
         {stop, From} ->
             From ! {stop, ok};
         {update, From}  ->
@@ -182,27 +188,30 @@ loop() ->
       Pairs :: map().
 
 loop(Pairs) ->
+    io:format("IN DA LOOP ~n"),
     receive
         {ping, flip, From} ->
-            exit(simulated_bug);
+            exit(simulated_bug),
+            From ! {pong, blopp},
+            loop(Pairs);
         {ping, Ping, From} ->
             case maps:is_key(Ping, Pairs) of
                 true ->
+                    % sending the message {pong, Pong}
                     From ! {pong, maps:get(Ping, Pairs)};
                 false ->
                     From ! unknown
             end,
             loop(Pairs);
         %% TODO: Handle the update, put and stop actions. 
-        {stop, PID} ->
-            update,
-            PID ! {stop, ok};
+        {stop, From} ->
+            From ! {stop, ok};
             
         {update, From} ->
             From ! {update, ok},
             ?MODULE:loop(Pairs);
-        {put, Ping, Pong, PID} ->
-            PID ! {put, Ping, Pong, ok},
+        {put, Ping, Pong, From} ->
+            From ! {put, Ping, Pong, ok},
             Pair2 = maps:put(Ping, Pong, Pairs),
             loop(Pair2);
         Msg ->
