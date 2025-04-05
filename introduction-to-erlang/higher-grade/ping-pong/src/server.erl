@@ -78,15 +78,15 @@ supervisor(Stateful) ->
     process_flag(trap_exit, true),
     Pid = case Stateful of 
         true ->
-            spawn_link(fun() -> ?MODULE:loop(pairs()) end);
+            spawn_link(fun() -> loop(pairs()) end);
         false ->
-            spawn_link(fun() -> ?MODULE:loop() end)
+            spawn_link(fun() -> loop() end)
     end,
     register(server, Pid),
     receive 
         {'EXIT', Pid, Reason} ->
             io:format("Server crashed with reason ~p. Restarting...~n", [Reason]),
-            unregister(server),
+            % unregister(server),
             supervisor(Stateful)
     end.
 
@@ -165,12 +165,18 @@ loop() ->
         {ping, tick, From} ->
             From ! {pong, tock},
             loop();
-        {ping, ling, From} ->
-            From ! {pong, long},
-            loop();
-        {ping, sing, From} ->
-            From ! {pong, song},
-            loop();
+        % {ping, ling, From} ->
+        %     From ! {pong, long},
+        %     loop();
+        % {ping, sing, From} ->
+        %     From ! {pong, song},
+        %     loop();
+        % {ping, fing, From} ->
+        %     From ! {pong, fong},
+        %     loop();
+        % {ping, wing, From} ->
+        %     From ! {pong, wong},
+        %     loop();
         {stop, From} ->
             From ! {stop, ok};
         {update, From}  ->
