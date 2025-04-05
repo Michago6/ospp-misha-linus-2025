@@ -48,6 +48,7 @@ pairs() ->
       ding => dong,
       king => kong,
       bing => bong,
+      sing => song,
       ling => long}.
 
 %% @doc Starts the server.
@@ -77,11 +78,10 @@ supervisor(Stateful) ->
     process_flag(trap_exit, true),
     Pid = case Stateful of 
         true ->
-            spawn_link(fun() -> loop(pairs()) end);
+            spawn_link(fun() -> ?MODULE:loop(pairs()) end);
         false ->
-            spawn_link(fun() -> loop() end)
+            spawn_link(fun() -> ?MODULE:loop() end)
     end,
-    %% Register the server under the name 'server'
     register(server, Pid),
     receive 
         {'EXIT', Pid, Reason} ->
@@ -168,6 +168,9 @@ loop() ->
         {ping, ling, From} ->
             From ! {pong, long},
             loop();
+        {ping, sing, From} ->
+            From ! {pong, song},
+            loop();
         {stop, From} ->
             From ! {stop, ok};
         {update, From}  ->
@@ -191,9 +194,7 @@ loop(Pairs) ->
     io:format("IN DA LOOP ~n"),
     receive
         {ping, flip, From} ->
-            exit(simulated_bug),
-            From ! {pong, blopp},
-            loop(Pairs);
+            exit(simulated_bug);
         {ping, Ping, From} ->
             case maps:is_key(Ping, Pairs) of
                 true ->
