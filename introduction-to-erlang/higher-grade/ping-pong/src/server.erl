@@ -49,8 +49,7 @@ pairs() ->
       king => kong,
       bing => bong,
       sing => song,
-      ling => long,
-      linus => misha}.
+      ling => long}.
 
 %% @doc Starts the server.
 
