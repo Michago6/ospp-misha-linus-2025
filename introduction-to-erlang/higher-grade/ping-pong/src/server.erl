@@ -61,33 +61,33 @@ pairs() ->
 start(false, false) ->
     spawn(fun() -> loop() end); % works i think
 start(false, true) ->
-    spawn(fun() -> supervisor(false) end);
+    spawn(fun() -> supervisor(false, pairs()) end); % i think this also works now
 start(true, false) ->
     spawn(fun() -> loop(pairs()) end); % works i think
 start(true, true) ->
-    spawn(fun() -> supervisor(true) end).
+    spawn(fun() -> supervisor(true, pairs()) end).
 
 %% @doc The server supervisor. The supervisor must trap exit, spawn the server
 %% process, link to the server process and wait the server to terminate. If the
 %% server terminates due to an error, the supervisor should make a recursive
 %% call to it self to restart the server.
 
--spec supervisor(boolean()) -> no_return().
+-spec supervisor(boolean(), map()) -> no_return().
 
-supervisor(Stateful) ->
+supervisor(Stateful, State) ->
     process_flag(trap_exit, true),
     Pid = case Stateful of 
         true ->
-            spawn_link(fun() -> loop(pairs()) end);
+            spawn_link(fun() -> loop(State) end);
         false ->
             spawn_link(fun() -> loop() end)
     end,
     register(server, Pid),
     receive 
-        {'EXIT', Pid, Reason} ->
+        {'EXIT', Pid, {Reason, New}} ->
             io:format("Server crashed with reason ~p. Restarting...~n", [Reason]),
             % unregister(server),
-            supervisor(Stateful)
+            supervisor(Stateful, New)
     end.
 
 
@@ -168,9 +168,9 @@ loop() ->
         % {ping, ling, From} ->
         %     From ! {pong, long},
         %     loop();
-        % {ping, sing, From} ->
-        %     From ! {pong, song},
-        %     loop();
+        {ping, sing, From} ->
+            From ! {pong, song},
+            loop();
         % {ping, fing, From} ->
         %     From ! {pong, fong},
         %     loop();
@@ -200,7 +200,7 @@ loop(Pairs) ->
     io:format("IN DA LOOP ~n"),
     receive
         {ping, flip, From} ->
-            exit(simulated_bug);
+            exit({simulated_bug, Pairs});
         {ping, Ping, From} ->
             case maps:is_key(Ping, Pairs) of
                 true ->
