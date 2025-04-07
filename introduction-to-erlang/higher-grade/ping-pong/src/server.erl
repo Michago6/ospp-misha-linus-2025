@@ -49,7 +49,8 @@ pairs() ->
       king => kong,
       bing => bong,
       sing => song,
-      ling => long}.
+      ling => long,
+      linus => misha}.
 
 %% @doc Starts the server.
 
@@ -63,9 +64,9 @@ start(false, false) ->
 start(false, true) ->
     spawn(fun() -> supervisor(false, pairs()) end); % i think this also works now
 start(true, false) ->
-    spawn(fun() -> loop(pairs()) end); % works i think
+    spawn(fun() -> loop(pairs()) end); % works i think, % TODO: doesnt work with hot code swap
 start(true, true) ->
-    spawn(fun() -> supervisor(true, pairs()) end).
+    spawn(fun() -> supervisor(true, pairs()) end). % TODO: doesnt work with hot code swap 
 
 %% @doc The server supervisor. The supervisor must trap exit, spawn the server
 %% process, link to the server process and wait the server to terminate. If the
@@ -87,7 +88,10 @@ supervisor(Stateful, State) ->
         {'EXIT', Pid, {Reason, New}} ->
             io:format("Server crashed with reason ~p. Restarting...~n", [Reason]),
             % unregister(server),
-            supervisor(Stateful, New)
+            supervisor(Stateful, New);
+        {'EXIT', Pid, simulated_bug} ->
+            io:format("Server crashed with reason simulated_bug. Restarting...~n"),
+            supervisor(Stateful, State)
     end.
 
 
@@ -171,9 +175,9 @@ loop() ->
         {ping, sing, From} ->
             From ! {pong, song},
             loop();
-        % {ping, fing, From} ->
-        %     From ! {pong, fong},
-        %     loop();
+        {ping, fing, From} ->
+            From ! {pong, fong},
+            loop();
         % {ping, wing, From} ->
         %     From ! {pong, wong},
         %     loop();
