@@ -59,11 +59,11 @@ pairs() ->
       Server :: pid().
 
 start(false, false) ->
-    spawn(fun() -> loop() end); % works i think
+    spawn(fun() -> loop() end); % works i think, DONE
 start(false, true) ->
-    spawn(fun() -> supervisor(false, pairs()) end); % i think this also works now
+    spawn(fun() -> supervisor(false, pairs()) end); % i think this also works now DONE
 start(true, false) ->
-    spawn(fun() -> loop(pairs()) end); % works i think, % TODO: doesnt work with hot code swap
+    spawn(fun() -> loop(pairs()) end); % works i think, % TODO: doesnt work with hot code swap DONE
 start(true, true) ->
     spawn(fun() -> supervisor(true, pairs()) end). % TODO: doesnt work with hot code swap 
 
@@ -168,18 +168,18 @@ loop() ->
         {ping, tick, From} ->
             From ! {pong, tock},
             loop();
-        % {ping, ling, From} ->
-        %     From ! {pong, long},
-        %     loop();
+        {ping, ling, From} ->
+            From ! {pong, long},
+            loop();
         {ping, sing, From} ->
             From ! {pong, song},
             loop();
         {ping, fing, From} ->
             From ! {pong, fong},
             loop();
-        % {ping, wing, From} ->
-        %     From ! {pong, wong},
-        %     loop();
+        {ping, wing, From} ->
+            From ! {pong, wong},
+            loop();
         {stop, From} ->
             From ! {stop, ok};
         {update, From}  ->
@@ -202,8 +202,11 @@ loop() ->
 loop(Pairs) ->
     io:format("IN DA LOOP ~n"),
     receive
-        {ping, flip, From} ->
-            exit({simulated_bug, Pairs});
+        {ping, blipp, From} ->
+            io:format("Exiting server...~n"),
+            exit(simulated_bug),
+            From ! {pong, blopp},
+            loop(Pairs);
         {ping, Ping, From} ->
             case maps:is_key(Ping, Pairs) of
                 true ->
