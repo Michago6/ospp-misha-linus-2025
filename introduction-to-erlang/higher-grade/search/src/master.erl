@@ -1,6 +1,6 @@
 -module(master).
 
--export([start/3, stop/1]).
+-export([start/3, stop/1, log_guess/2]).
 
 init() ->
     maps:new().
@@ -23,6 +23,8 @@ start(NumWorkers, Min, Max) ->
 
     Master ! foo,
     Master ! bar,
+
+    % register(map, init()),
 
     Master.
 
@@ -50,3 +52,12 @@ loop(CountDown, Map) ->
             io:format("master:loop/2 Unknown message ~p~n", [Msg]),
             loop(CountDown, Map)
     end.
+
+-spec log_guess(Master, Worker) -> ok when
+    Master :: pid(),
+    Worker :: pid().
+
+log_guess(Master, Worker) -> 
+
+    
+    ok.

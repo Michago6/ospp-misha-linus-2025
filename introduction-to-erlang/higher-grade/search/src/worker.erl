@@ -27,6 +27,7 @@ loop(Server, Master, Min, Max, Guesses) ->
             tbi;
         {wrong, Guess} ->
             io:format("~p ~*.. B~n", [self(), utils:width(Max), Guess]),
+            Master ! {guess, Guesses},
             loop(Server, Master, Min, Max, Guesses + 1);
         {'EXIT', _From, loser} ->
             io:format("~p I lose :(~n", [self()])
