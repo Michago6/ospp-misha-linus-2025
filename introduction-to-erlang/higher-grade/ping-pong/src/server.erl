@@ -47,7 +47,9 @@ pairs() ->
       hipp => hopp,
       ding => dong,
       king => kong,
-      bing => bong}.
+      bing => bong,
+      sing => song,
+      ling => long}.
 
 %% @doc Starts the server.
 
@@ -57,36 +59,40 @@ pairs() ->
       Server :: pid().
 
 start(false, false) ->
-    spawn(fun() -> loop() end);
+    spawn(fun() -> loop() end); % works i think
 start(false, true) ->
-    spawn(fun() -> supervisor(false) end);
+    spawn(fun() -> supervisor(false, pairs()) end); % i think this also works now
 start(true, false) ->
-    spawn(fun() -> loop(pairs()) end);
+    spawn(fun() -> loop(pairs()) end); % works i think, % TODO: doesnt work with hot code swap
 start(true, true) ->
-    spawn(fun() -> supervisor(true) end).
+    spawn(fun() -> supervisor(true, pairs()) end). % TODO: doesnt work with hot code swap 
 
 %% @doc The server supervisor. The supervisor must trap exit, spawn the server
 %% process, link to the server process and wait the server to terminate. If the
 %% server terminates due to an error, the supervisor should make a recursive
 %% call to it self to restart the server.
 
--spec supervisor(Stateful) -> ok when
-      Stateful :: boolean().
+-spec supervisor(boolean(), map()) -> no_return().
 
-supervisor(Stateful) ->
-    %% TODO: implement this 
+supervisor(Stateful, State) ->
     process_flag(trap_exit, true),
-    case Stateful of 
+    Pid = case Stateful of 
         true ->
-            spawn_link(fun() -> loop(pairs()) end);
+            spawn_link(fun() -> loop(State) end);
         false ->
             spawn_link(fun() -> loop() end)
     end,
+    register(server, Pid),
     receive 
-    {'EXIT', PID, simulated_bug} ->
-        io:format("simulated bug PID: ~p~n", [PID]),
-        supervisor(Stateful)
+        {'EXIT', Pid, {Reason, New}} ->
+            io:format("Server crashed with reason ~p. Restarting...~n", [Reason]),
+            % unregister(server),
+            supervisor(Stateful, New);
+        {'EXIT', Pid, simulated_bug} ->
+            io:format("Server crashed with reason simulated_bug. Restarting...~n"),
+            supervisor(Stateful, State)
     end.
+
 
 
 
@@ -162,6 +168,18 @@ loop() ->
         {ping, tick, From} ->
             From ! {pong, tock},
             loop();
+        % {ping, ling, From} ->
+        %     From ! {pong, long},
+        %     loop();
+        {ping, sing, From} ->
+            From ! {pong, song},
+            loop();
+        {ping, fing, From} ->
+            From ! {pong, fong},
+            loop();
+        % {ping, wing, From} ->
+        %     From ! {pong, wong},
+        %     loop();
         {stop, From} ->
             From ! {stop, ok};
         {update, From}  ->
@@ -182,27 +200,28 @@ loop() ->
       Pairs :: map().
 
 loop(Pairs) ->
+    io:format("IN DA LOOP ~n"),
     receive
         {ping, flip, From} ->
-            exit(simulated_bug);
+            exit({simulated_bug, Pairs});
         {ping, Ping, From} ->
             case maps:is_key(Ping, Pairs) of
                 true ->
+                    % sending the message {pong, Pong}
                     From ! {pong, maps:get(Ping, Pairs)};
                 false ->
                     From ! unknown
             end,
             loop(Pairs);
         %% TODO: Handle the update, put and stop actions. 
-        {stop, PID} ->
-            update,
-            PID ! {stop, ok};
+        {stop, From} ->
+            From ! {stop, ok};
             
         {update, From} ->
             From ! {update, ok},
             ?MODULE:loop(Pairs);
-        {put, Ping, Pong, PID} ->
-            PID ! {put, Ping, Pong, ok},
+        {put, Ping, Pong, From} ->
+            From ! {put, Ping, Pong, ok},
             Pair2 = maps:put(Ping, Pong, Pairs),
             loop(Pair2);
         Msg ->
