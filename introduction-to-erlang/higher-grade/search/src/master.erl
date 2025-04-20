@@ -1,6 +1,6 @@
 -module(master).
 
--export([start/3, stop/1, log_guess/2]).
+-export([start/3, stop/1]).
 
 init() ->
     maps:new().
@@ -63,14 +63,6 @@ loop(CountDown, Map) ->
             io:format("master:loop/2 Unknown message (nestled receive)~n"),
             loop(CountDown, Map)
     end.
--spec log_guess(Master, Self) -> ok when
-      Master :: pid(),
-      Self :: pid().
-
-log_guess(Master, Self) ->
-    Self ! {request_worker_data, Master},
-    % io:format("Sent message~n"),
-    ok.
 
 % go through the map and terminate all workers that are still searching
 terminate(Map) ->
