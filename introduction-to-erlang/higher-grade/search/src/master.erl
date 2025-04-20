@@ -1,6 +1,6 @@
 -module(master).
 
--export([start/3, stop/1]).
+-export([start/3, stop/1, log_guess/2]).
 
 init() ->
     maps:new().
@@ -16,13 +16,15 @@ init() ->
 
 start(NumWorkers, Min, Max) ->
     Secret = utils:random(Min, Max),
+    io:format("Secret: ~p~n", [Secret]),
     Server = server:start(Secret),
     Master = spawn(fun() -> loop(NumWorkers, init()) end),
+    io:format("Master: ~p~n", [Master]),
 
     [worker:start(Server, Master, Min, Max) || _ <- lists:seq(1, NumWorkers)],
 
-    Master ! foo,
-    Master ! bar,
+    % Master ! foo,
+    % Master ! bar,
 
     Master.
 
@@ -38,15 +40,29 @@ loop(0, Map) ->
     io:format("DONE ~p~n", [Map]);
 
 loop(CountDown, Map) ->
-    receive
-        {guess, _Master} ->
+    io:format("Master Tick~n"),
+    receive {guess, _Master} ->
             loop(CountDown, Map);
+        {receive_worker_data, Guess, Guesses, Self} ->
+            io:format("Message received~n"),
+            NewMap = maps:put(Self, {Guesses, Guess, searching}, Map),
+            loop(CountDown, NewMap);
         print ->
-            io:format("~p~n", [Map]),
+            io:format("Map:~n~p~n", [Map]),
             loop(CountDown, Map);
         stop  ->
-            ok;
+            loop(CountDown, Map);
         Msg ->
             io:format("master:loop/2 Unknown message ~p~n", [Msg]),
+            loop(CountDown, Map);
+        _ ->
+            io:format("master:loop/2 Unknown message (nestled receive)~n"),
             loop(CountDown, Map)
     end.
+-spec log_guess(Master, Self) -> ok when
+      Master :: pid(),
+      Self :: pid().
+
+log_guess(Master, Self) ->
+    Self ! {request_worker_data, Master},
+    io:format("Sent message~n").

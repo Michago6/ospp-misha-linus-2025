@@ -23,7 +23,15 @@ loop(Server, Master, Min, Max, Guesses) ->
     master:log_guess(Master, self()),
 
     receive
+        {request_worker_data, Sender} ->
+            io:format("Worker received message~n"),
+            Sender ! {receive_worker_data, Guess, Guesses, self()},
+            loop(Server, Master, Min, Max, Guesses);
+
         {right, Guess} ->
+            io:format("~p I win :)~n", [self()]),
+            Master ! print,
+            % todo: send message to master???
             tbi;
         {wrong, Guess} ->
             io:format("~p ~*.. B~n", [self(), utils:width(Max), Guess]),
