@@ -81,6 +81,7 @@ terminate(Map) ->
             winner ->
                 {X, Y, winner};
             searching ->
+                Key ! {'EXIT', self(), loser},
                 {X, Y, loser}
         end
     end,
