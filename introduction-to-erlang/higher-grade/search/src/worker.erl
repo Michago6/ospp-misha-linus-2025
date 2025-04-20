@@ -31,6 +31,7 @@ loop(Server, Master, Min, Max, Guesses) ->
         {right, Guess} ->
             io:format("~p I win :)~n", [self()]),
             Master ! print,
+            Master ! {winner, Guess, Guesses, self()},
             % todo: send message to master???
             tbi;
         {wrong, Guess} ->
