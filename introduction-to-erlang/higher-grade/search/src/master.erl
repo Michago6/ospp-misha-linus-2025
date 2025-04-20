@@ -40,12 +40,12 @@ loop(0, Map) ->
     io:format("DONE ~p~n", [Map]);
 
 loop(CountDown, Map) ->
-    io:format("Master Tick~n"),
+    % io:format("Master Tick~n"),
     receive 
         {guess, _Master} ->
             loop(CountDown, Map);
         {receive_worker_data, Guess, Guesses, Self} ->
-            io:format("Message received~n"),
+            % io:format("Message received~n"),
             NewMap = maps:put(Self, {Guesses, Guess, searching}, Map),
             loop(CountDown, NewMap);
         {winner, Guess, Guesses, Self} ->
@@ -54,7 +54,7 @@ loop(CountDown, Map) ->
         print ->
             io:format("Map:~n~p~n", [Map]),
             loop(CountDown, Map);
-        stop  ->
+        stop ->
             io:format("Stop!~n");
         Msg ->
             io:format("master:loop/2 Unknown message ~p~n", [Msg]),
@@ -69,7 +69,7 @@ loop(CountDown, Map) ->
 
 log_guess(Master, Self) ->
     Self ! {request_worker_data, Master},
-    io:format("Sent message~n"),
+    % io:format("Sent message~n"),
     ok.
 
 % go through the map and terminate all workers that are still searching
@@ -81,10 +81,12 @@ terminate(Map) ->
             winner ->
                 {X, Y, winner};
             searching ->
-                Key ! {'EXIT', self(), loser},
                 {X, Y, loser}
         end
     end,
          
     FinalMap = maps:map(Fun, Map),
+    stop(self()),
+    lists:foreach(fun(PID) -> PID ! {'EXIT', self(), loser} end, maps:keys(FinalMap)),
+    timer:sleep(1000),
     io:format("Final statistics from the master:~n~p~n", [FinalMap]).
